@@ -125,15 +125,18 @@ class TwitchRecorder:
     def notify_user(self, started=True):
         if (started):
             data = {
+                'chat_id': "228804457",
                 'message': 'Aufnahme von ' + self.username + ' gestartet',
                 'silent': True
             }
         else:
             data = {
+                'chat_id': "228804457",
                 'message': 'Aufnahme von ' + self.username + ' beendet',
                 'silent': True
             }
-        requests.get(self.te_url, data=data)
+
+        r = requests.get(self.te_url + "?chat_id=" + data['chat_id'] + "&text=" + data['message'] + "&silent=true")
 
     def loop_check(self, recorded_path, processed_path):
         while True:
