@@ -34,12 +34,16 @@ class TwitchRecorder:
         self.quality = "best"
 
         # twitch configuration
-        self.client_id = config.client_id
-        self.client_secret = config.client_secret
+        self.client_id = config.tw_client_id
+        self.client_secret = config.tw_client_secret
         self.token_url = "https://id.twitch.tv/oauth2/token?client_id=" + self.client_id + "&client_secret=" \
                          + self.client_secret + "&grant_type=client_credentials"
         self.url = "https://api.twitch.tv/helix/streams"
         self.access_token = self.fetch_access_token()
+
+        # telegram configuration
+        self.te_token = config.te_token
+        self.te_url = "https://api.telegram.org/" + self.te_token + "/sendMessage"
 
     def fetch_access_token(self):
         token_response = requests.post(self.token_url, timeout=15)
@@ -118,6 +122,19 @@ class TwitchRecorder:
                     status = TwitchResponseStatus.NOT_FOUND
         return status, info
 
+    def notify_user(self, started=True):
+        if (started):
+            data = {
+                'message': 'Aufnahme von ' + self.username + ' gestartet',
+                'silent': True
+            }
+        else:
+            data = {
+                'message': 'Aufnahme von ' + self.username + ' beendet',
+                'silent': True
+            }
+        requests.get(self.te_url, data=data)
+
     def loop_check(self, recorded_path, processed_path):
         while True:
             status, info = self.check_user()
@@ -137,6 +154,8 @@ class TwitchRecorder:
             elif status == TwitchResponseStatus.ONLINE:
                 logging.info("%s online, stream recording in session", self.username)
 
+                self.notify_user()
+
                 channels = info["data"]
                 channel = next(iter(channels), None)
                 filename = self.username + " - " + datetime.datetime.now() \
@@ -152,6 +171,8 @@ class TwitchRecorder:
                 subprocess.call(
                     ["streamlink", "--twitch-disable-ads", "twitch.tv/" + self.username, self.quality,
                      "-o", recorded_filename])
+
+                self.notify_user(False)
 
                 logging.info("recording stream is done, processing video file")
                 if os.path.exists(recorded_filename) is True:
